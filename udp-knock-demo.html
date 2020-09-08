@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>JS Port Knocking</title>
+  <style>
+    body, input {
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>UDP Port Knocking</h1>
+  <div>
+    Addr: <input id="txtAddr" type="text" value="106.13.167.86">
+  </div>
+  <div>
+    Port: <input id="txtPort" type="number" value="30000">
+  </div>
+  <div>
+    Data: <input id="txtData" type="text" minlength="4" maxlength="256" value="OpenSesame">
+  </div>
+  <div>
+    <button id="btnKnock">Knock</button>
+  </div>
+  <div>
+  <h2>Test:</h2>
+  <div>
+    <a href="http://106.13.167.86:8080/hello" target="_blank">
+      http://106.13.167.86:8080/hello
+    </a>
+  </div>
+  <script>
+  btnKnock.onclick = async function() {
+    var addr = txtAddr.value
+    var port = txtPort.value
+    var data = txtData.value
+
+    try {
+      await sendUDP(addr, +port, data)
+    } catch (err) {
+      alert('ERROR:\n\n' + err)
+    }
+  }
+
+
+  async function sendUDP(addr, port, data) {
+    const pc = new RTCPeerConnection({})
+
+    const sd = new RTCSessionDescription({
+      type: 'offer',
+      sdp: `\
+v=0
+o=- 1234567890 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+a=group:BUNDLE data
+m=application 9 UDP/DTLS/SCTP webrtc-datachannel
+c=IN IP4 0.0.0.0
+a=ice-ufrag:${data}
+a=ice-pwd:0000000000000000000000
+a=ice-options:trickle
+a=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00
+a=setup:actpass
+a=mid:data
+a=sctp-port:5000
+a=max-message-size:262144
+`
+    })
+    await pc.setRemoteDescription(sd)
+
+    const answer = await pc.createAnswer()
+    const desc = new RTCSessionDescription(answer)
+    await pc.setLocalDescription(desc)
+
+    pc.addIceCandidate({
+      candidate: `candidate:842163049 1 udp 1677729535 ${addr} ${port} typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag ${data} network-cost 999`,
+      sdpMLineIndex: 0,
+      sdpMid: 'data',
+    })
+
+    setTimeout(_ => pc.close(), 500)
+  }
+  </script>
+</body>
+</html>
