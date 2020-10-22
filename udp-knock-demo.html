@@ -13,7 +13,7 @@
 <body>
   <h1>UDP Port Knocking</h1>
   <div>
-    Addr: <input id="txtAddr" type="text" value="106.13.167.86">
+    Host: <input id="txtHost" type="text" value="146.56.248.195">
   </div>
   <div>
     Port: <input id="txtPort" type="number" value="30000">
@@ -27,25 +27,42 @@
   <div>
   <h2>Test:</h2>
   <div>
-    <a href="http://106.13.167.86:8080/hello" target="_blank">
-      http://106.13.167.86:8080/hello
+    <a href="http://146.56.248.195:8080/hello" target="_blank">
+      http://146.56.248.195:8080/hello
     </a>
   </div>
+  <h2>Server Policy:</h2>
+  <pre>
+iptables \
+  -i eth0 \
+  -t raw --append PREROUTING \
+  -p tcp --dport 8080 --syn \
+  -m recent --name knocked ! --rcheck --seconds 600 \
+  -j DROP
+
+iptables \
+  -i eth0 \
+  -t raw --append PREROUTING \
+  -p udp --dport 30000 \
+  -m string --string "OpenSesame" --algo bm \
+  -m recent --name knocked --set \
+  -j DROP
+  </pre>
   <script>
   btnKnock.onclick = async function() {
-    var addr = txtAddr.value
+    var host = txtHost.value
     var port = txtPort.value
     var data = txtData.value
 
     try {
-      await sendUDP(addr, +port, data)
+      await sendUDP(host, +port, data)
     } catch (err) {
       alert('ERROR:\n\n' + err)
     }
   }
 
 
-  async function sendUDP(addr, port, data) {
+  async function sendUDP(host, port, data) {
     const pc = new RTCPeerConnection({})
 
     const sd = new RTCSessionDescription({
@@ -75,7 +92,7 @@ a=max-message-size:262144
     await pc.setLocalDescription(desc)
 
     pc.addIceCandidate({
-      candidate: `candidate:842163049 1 udp 1677729535 ${addr} ${port} typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag ${data} network-cost 999`,
+      candidate: `candidate:842163049 1 udp 1677729535 ${host} ${port} typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag ${data} network-cost 999`,
       sdpMLineIndex: 0,
       sdpMid: 'data',
     })
